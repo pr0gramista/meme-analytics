@@ -7,23 +7,30 @@ from elasticsearch import Elasticsearch
 
 print("Meme analytics running")
 
+
+
 # Sites to scan
 sites = []
+
+# Limit page index, so our app won't index like 20000 pages (but it could)
+limit_pages = 10
 
 # Memes API url
 api = 'http://localhost:8080'
 
 # Elasticsearch connection string
 es_conn = None
-es_index = ''
+es_index = 'test-index'
 es = None
 
 def read_config():
     config = configparser.ConfigParser()
     config.read('config.ini')
-    global sites, es_conn, api
+    global sites, es_conn, api, limit_pages, es_index
     sites = config.get('main', 'sites', fallback=sites).split(',')
     es_conn = config.get('main', 'es_conn', fallback=es_conn)
+    es_index = config.get('main', 'es_index', fallback=es_index)
+    limit_pages = config.get('main', 'limit_pages', fallback=limit_pages)
     if es_conn is not None:
         es_conn = json.loads(es_conn)
     api = config.get('main', 'api', fallback=api)
@@ -35,8 +42,6 @@ def print_config():
         print('Elasticsearch connection url: ' + es_conn)
 
 def get_memes(site, page):
-    fail = False # Whether it should stop fetching memes
-
     if page == 0:
         url = api + '/' + site
     else:
@@ -61,13 +66,13 @@ for site in sites:
 
         for meme in memes:
             # if is_new:
-            es.index(index="test-index", doc_type='meme', body=meme)
+            es.index(index=es_index, doc_type='meme', body=meme)
             print(meme)
             # else
             #   break or something like that
 
         page += 1
-        if page > 20:
+        if page > limit_pages:
             fail = True
 
 
