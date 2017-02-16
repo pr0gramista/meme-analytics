@@ -7,8 +7,6 @@ from elasticsearch import Elasticsearch
 
 print("Meme analytics running")
 
-
-
 # Sites to scan
 sites = []
 
@@ -41,42 +39,48 @@ def print_config():
     if es_conn is not None:
         print('Elasticsearch connection url: ' + es_conn)
 
-def get_memes(site, page):
-    if page == 0:
-        url = api + '/' + site
-    else:
-        url = api + '/' + site + '/' + str(page)
-
-    data = requests.get(url).json()
-    return data['memes']
+def is_new(site, meme):
+    return True #dummy code
 
 def scan():
-    print("I'm working...")
+    print("Scanning...")
+    for site in sites:
+        print("Site: " + site)
+        page = "/" + site
+        page_count = 0
+        stop = False
+        while stop is not True:
+            url = api + page
+            page_count += 1
+
+            data = requests.get(url).json()
+
+            for meme in data['memes']:
+                print(site + " meme: " + meme['title'])
+                if is_new(site, meme):
+                    es.index(index=es_index, doc_type='meme', body=meme)
+
+                    # Set things for next iteration
+                    page = data['nextPage']
+
+                    if page_count > limit_pages:
+                        stop = True
+                        print("Stopped because of page limit")
+                        break
+                else:
+                    stop = True
+                    print("Stopped because meme was old")
+                    break
 
 read_config()
 print_config()
 
 es = Elasticsearch(hosts=es_conn)
 
-for site in sites:
-    fail = False
-    page = 0
-    while fail is False:
-        memes = get_memes(site, page)
+scan()
 
-        for meme in memes:
-            # if is_new:
-            es.index(index=es_index, doc_type='meme', body=meme)
-            print(meme)
-            # else
-            #   break or something like that
-
-        page += 1
-        if page > limit_pages:
-            fail = True
-
-
-schedule.every(5).seconds.do(scan)
+print("Standby mode")
+schedule.every(15).minutes.do(scan)
 
 while True:
     schedule.run_pending()
