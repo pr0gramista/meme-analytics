@@ -8,6 +8,9 @@ from elasticsearch import Elasticsearch
 
 print("Meme analytics running")
 
+# Debug
+debug = False
+
 # Last memes, used to determine whether meme is new
 last_memes = {}
 last_memes_directory = "last_memes"
@@ -45,11 +48,13 @@ def load_last_memes():
 def read_config():
     config = configparser.ConfigParser()
     config.read('config.ini')
-    global sites, es_conn, api, limit_pages, es_index
+    global sites, es_conn, api, limit_pages, es_index, debug, last_memes_directory
     sites = config.get('main', 'sites', fallback=sites).split(',')
     es_conn = config.get('main', 'es_conn', fallback=es_conn)
     es_index = config.get('main', 'es_index', fallback=es_index)
-    limit_pages = config.get('main', 'limit_pages', fallback=limit_pages)
+    limit_pages = config.getint('main', 'limit_pages', fallback=limit_pages)
+    debug = config.getboolean('main', 'debug', fallback=debug)
+    last_memes_directory = config.get('main', 'last_memes_dir', fallback=last_memes_directory)
     if es_conn is not None:
         es_conn = json.loads(es_conn)
     api = config.get('main', 'api', fallback=api)
