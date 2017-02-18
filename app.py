@@ -48,17 +48,26 @@ def is_new(meme):
     global es
     try:
         response = es.search(index=es_index, body={"query": {"constant_score": {"filter": {"match_phrase": {"url": meme['url']}}}}})
+
+        if debug:
+            print(meme)
+            print(response)
+
         if response['hits']['total'] > 0:
             return response['hits']['hits'][0]['_id']
         else:
             return None
     except NotFoundError:
-        return None # It's new
+        return None
 
 def scan_site(site):
     page = "/" + site
     page_count = 0
     stop = False
+
+    # Counters
+    memes_indexed = 0
+    memes_new = 0
     while stop is not True:
         url = api + page
         page_count += 1
@@ -68,15 +77,22 @@ def scan_site(site):
         for meme in data['memes']:
             mid = is_new(meme)
             es.index(index=es_index, doc_type='meme', body=meme, id=mid)
-            print("Indexed {0} meme (id: {2}) with title: {1}".format(site, meme['title'], mid))
+
+            if mid is None:
+                memes_new += 1
+            memes_indexed += 1
+
+            if debug:
+                print("Indexed {0} meme (id: {2}) with title: {1}".format(site, meme['title'], mid))
 
             # Set things for next iteration
             page = data['nextPage']
 
             if page_count > limit_pages:
                 stop = True
-                print("Stopped scanning {} because of page limit".format(site))
                 break
+
+    print("Indexed {0} ({1} new) memes for site {2}".format(memes_indexed, memes_new, site))
 
 def scan():
     print("Scanning...")
