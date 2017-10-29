@@ -2,6 +2,8 @@ import tensorflow as tf
 import numpy as np
 import sys
 import configparser
+import urllib.request as request
+import os
 
 class Classifier():
     session = None
@@ -70,7 +72,18 @@ class Classifier():
         values = [results[i] for i in top_k]
         return dict(zip(labels, values))
 
-# Read configz
+    def download_and_classify(self, image_url):
+        extension = os.path.splitext(image_url)[1]
+        path = "classify_image{}".format(extension)
+        request.urlretrieve(image_url, path)
+
+        result = self.classify(path)
+
+        os.remove(path) # Remove file
+
+        return result
+
+# Download or read local file and classify
 if __name__ == "__main__":
     config = configparser.ConfigParser()
     config.read('config.ini')
@@ -81,7 +94,10 @@ if __name__ == "__main__":
     image_path = sys.argv[1]
 
     classifier = Classifier(graph_path, labels_path)
-    print(classifier.classify(image_path))
+    if image_path.startswith("http"):
+        print(classifier.download_and_classify(image_path))
+    else:
+        print(classifier.classify(image_path))
 
 
 
