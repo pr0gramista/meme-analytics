@@ -5,7 +5,8 @@ import configparser
 import urllib.request as request
 import os
 
-class Classifier():
+
+class Classifier:
     session = None
 
     def __init__(self, graph_path, labels_path):
@@ -49,10 +50,16 @@ class Classifier():
             tf.import_graph_def(graph_def)
         self.graph = graph
 
+    def start_session(self):
+        self.session = tf.Session(graph=self.graph)
+
+    def end_session(self):
+        self.session.close()
+
     def classify(self, image_path):
-        session_made = False # Flag whether we want to close session
+        session_made = False  # Flag whether we want to close session
         if self.session is not None:
-            sess = self.session # Session is restored
+            sess = self.session  # Session is restored
         else:
             sess = tf.Session(graph=self.graph)
             session_made = True
@@ -75,13 +82,17 @@ class Classifier():
     def download_and_classify(self, image_url):
         extension = os.path.splitext(image_url)[1]
         path = "classify_image{}".format(extension)
-        request.urlretrieve(image_url, path)
+        try:
+            request.urlretrieve(image_url, path)
+        except:
+            return None
 
         result = self.classify(path)
 
-        os.remove(path) # Remove file
+        os.remove(path)  # Remove file
 
         return result
+
 
 # Download or read local file and classify
 if __name__ == "__main__":
@@ -98,7 +109,3 @@ if __name__ == "__main__":
         print(classifier.download_and_classify(image_path))
     else:
         print(classifier.classify(image_path))
-
-
-
-
