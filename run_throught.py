@@ -3,7 +3,7 @@ import json
 from elasticsearch import Elasticsearch
 import classifier
 
-print("Meme analytics Classify running")
+print("Meme analytics classification run")
 
 # Debug
 debug = False
@@ -35,20 +35,10 @@ def read_config():
     api = config.get('main', 'api', fallback=api)
 
 
-def print_config():
-    if es_conn is not None:
-        print('Elasticsearch connection url: ' + es_conn)
-
-
-classifier = classifier.Classifier(graph_path, labels_path)
-classifier.start_session()
-
-
-def process_memes(memes):
+def process_memes(classifier, memes):
     for meme in memes:
         body = meme['_source']
         if body['content']['contentType'] == 'IMAGE':
-            global classifier
             print(body['content']['url'])
             result = classifier.download_and_classify(body['content']['url'])
             if result is not None:
@@ -64,27 +54,30 @@ def process_memes(memes):
                 })
 
 
-read_config()
-print_config()
+if __name__ == '__main__':
+    read_config()
 
-es = Elasticsearch(hosts=es_conn)
+    classifier = classifier.Classifier(graph_path, labels_path)
+    classifier.start_session()
 
-page = es.search(
-    index=es_index,
-    scroll='2m',
-    size=10,
-    body={
-        # Your query's body
-    })
-sid = page['_scroll_id']
-scroll_size = page['hits']['total']
-process_memes(page['hits']['hits'])
+    es = Elasticsearch(hosts=es_conn)
 
-while (scroll_size > 0):
-    page = es.scroll(scroll_id=sid, scroll='2m')
+    page = es.search(
+        index=es_index,
+        scroll='2m',
+        size=10,
+        body={
+            # Your query's body
+        })
     sid = page['_scroll_id']
+    scroll_size = page['hits']['total']
+    process_memes(classifier, page['hits']['hits'])
 
-    scroll_size = len(page['hits']['hits'])
-    process_memes(page['hits']['hits'])
+    while (scroll_size > 0):
+        page = es.scroll(scroll_id=sid, scroll='2m')
+        sid = page['_scroll_id']
 
-classifier.end_session()
+        scroll_size = len(page['hits']['hits'])
+        process_memes(classifier, page['hits']['hits'])
+
+    classifier.end_session()
