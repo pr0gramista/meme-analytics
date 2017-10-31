@@ -1,7 +1,9 @@
 import configparser
 import json
-from elasticsearch import Elasticsearch
 import classifier
+
+from elasticsearch import Elasticsearch
+from datetime import datetime
 
 print("Meme analytics classification run")
 
@@ -42,9 +44,10 @@ def process_memes(classifier, memes):
             print(body['content']['url'])
             result = classifier.download_and_classify(body['content']['url'])
             if result is not None:
-                result = {k: v.item() for k, v in
-                          result.items()}  # Elasticsearch forces us to convert numpy float to native type
+                # Elasticsearch forces us to convert numpy float to native type
+                result = {k: v.item() for k, v in result.items()}
                 print(result)
+                result['date'] = datetime.now()
 
                 # Update document
                 es.update(index=es_index, doc_type='meme', id=meme['_id'], body={
