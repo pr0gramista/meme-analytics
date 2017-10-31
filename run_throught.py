@@ -70,10 +70,23 @@ if __name__ == '__main__':
         scroll='2m',
         size=10,
         body={
-            # Your query's body
+            "query": {
+                "bool": {
+                    "must_not": {
+                        "exists": {
+                            "field": "classification"
+                        }
+                    }
+                }
+            }
         })
     sid = page['_scroll_id']
     scroll_size = page['hits']['total']
+    counter = len(page['hits']['hits'])
+
+    if debug:
+        print(page)
+        print('wow')
     process_memes(classifier, page['hits']['hits'])
 
     while (scroll_size > 0):
@@ -81,6 +94,12 @@ if __name__ == '__main__':
         sid = page['_scroll_id']
 
         scroll_size = len(page['hits']['hits'])
+        counter += scroll_size
         process_memes(classifier, page['hits']['hits'])
+        if debug:
+            print(page)
+            print(scroll_size)
 
     classifier.end_session()
+
+    print('Processed {} memes'.format(counter))
