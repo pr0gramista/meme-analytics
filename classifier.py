@@ -79,12 +79,19 @@ class Classifier:
         values = [results[i] for i in top_k]
         return dict(zip(labels, values))
 
+    @staticmethod
+    def __clean_url(url):
+        # Removes query string
+        return url.split('?',maxsplit=1)[0]
+
     def download_and_classify(self, image_url):
+        image_url = self.__clean_url(image_url)
         extension = os.path.splitext(image_url)[1]
         path = "classify_image{}".format(extension)
         try:
             request.urlretrieve(image_url, path)
-        except:
+        except Exception as e:
+            print(e)
             return None
 
         result = self.classify(path)
