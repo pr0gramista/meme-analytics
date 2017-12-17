@@ -40,7 +40,7 @@ def read_config():
 def process_memes(classifier, memes):
     for meme in memes:
         body = meme['_source']
-        if body['content']['contentType'] == 'IMAGE':
+        if body['content']['contentType'] == 'IMAGE' and not body['content']['url'].endswith('.gif'):
             print(body['content']['url'])
             result = classifier.download_and_classify(body['content']['url'])
             if result is not None:
