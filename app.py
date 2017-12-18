@@ -86,23 +86,27 @@ def scan_site(site):
 
         data = requests.get(url).json()
 
-        for meme in data['memes']:
-            mid = is_new(meme)
-            es.index(index=es_index, doc_type='meme', body=meme, id=mid)
+        if 'memes' in data:
+            for meme in data['memes']:
+                mid = is_new(meme)
+                es.index(index=es_index, doc_type='meme', body=meme, id=mid)
 
-            if mid is None:
-                memes_new += 1
-            memes_indexed += 1
+                if mid is None:
+                    memes_new += 1
+                memes_indexed += 1
 
-            if debug:
-                print("Indexed {0} meme (id: {2}) with title: {1}".format(site, meme['title'], mid))
+                if debug:
+                    print("Indexed {0} meme (id: {2}) with title: {1}".format(site, meme['title'], mid))
 
-            # Set things for next iteration
-            page = data['nextPage']
+                # Set things for next iteration
+                page = data['nextPage']
 
-            if page_count > limit_pages:
-                stop = True
-                break
+                if page_count > limit_pages:
+                    stop = True
+                    break
+        else:
+            print("Scanning ended too soon (no memes received)")
+            break
 
     print("Indexed {0} ({1} new) memes for site {2}".format(memes_indexed, memes_new, site))
 
