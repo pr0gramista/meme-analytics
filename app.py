@@ -25,16 +25,21 @@ es_conn = None
 es_index = 'test-index'
 es = None
 
+# Whether we should stop scanning site on already indexed meme
+stop_on_existing = False
+
 
 def read_config():
     config = configparser.ConfigParser()
     config.read('config.ini')
-    global sites, es_conn, api, limit_pages, es_index, debug
+    global sites, es_conn, api, limit_pages, es_index, debug, stop_on_existing
     sites = config.get('main', 'sites', fallback=sites).split(',')
     es_conn = config.get('main', 'es_conn', fallback=es_conn)
     es_index = config.get('main', 'es_index', fallback=es_index)
     limit_pages = config.getint('main', 'limit_pages', fallback=limit_pages)
     debug = config.getboolean('main', 'debug', fallback=debug)
+    stop_on_existing = config.getboolean('main', 'stop_on_existing', fallback=stop_on_existing)
+
     if es_conn is not None:
         es_conn = json.loads(es_conn)
     api = config.get('main', 'api', fallback=api)
@@ -42,6 +47,8 @@ def read_config():
 
 def print_config():
     print('Sites to scan: ' + str(sites))
+    if stop_on_existing:
+        print('Stop on exitsting is enabled')
     print('Memes API url: ' + api)
     if es_conn is not None:
         print('Elasticsearch connection url: ' + es_conn)
@@ -106,9 +113,13 @@ def scan_site(site):
         mid = is_new(meme)
         es.index(index=es_index, doc_type='meme', body=meme, id=mid)
 
+        memes_indexed += 1
         if mid is None:
             memes_new += 1
-        memes_indexed += 1
+        elif stop_on_existing:
+            print(
+            "Scanning {} stopped, because meme was already indexed and [stop_on_existing] is enabled".format(site))
+            break
 
         if debug:
             print("Indexed {0} meme (id: {2}) with title: {1}".format(site, meme['title'], mid))
