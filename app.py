@@ -72,15 +72,12 @@ def is_new(meme):
         return None
 
 
-def scan_site(site):
+def memes(site, max_page):
     page = "/" + site
     page_count = 0
     stop = False
 
-    # Counters
-    memes_indexed = 0
-    memes_new = 0
-    while stop is not True:
+    while stop is False:
         url = api + page
         page_count += 1
 
@@ -88,16 +85,7 @@ def scan_site(site):
 
         if 'memes' in data:
             for meme in data['memes']:
-                mid = is_new(meme)
-                es.index(index=es_index, doc_type='meme', body=meme, id=mid)
-
-                if mid is None:
-                    memes_new += 1
-                memes_indexed += 1
-
-                if debug:
-                    print("Indexed {0} meme (id: {2}) with title: {1}".format(site, meme['title'], mid))
-
+                yield meme
                 # Set things for next iteration
                 page = data['nextPage']
 
@@ -108,6 +96,22 @@ def scan_site(site):
             print("Scanning ended too soon (no memes received)")
             break
 
+
+def scan_site(site):
+    # Counters
+    memes_indexed = 0
+    memes_new = 0
+
+    for meme in memes(site, limit_pages):
+        mid = is_new(meme)
+        es.index(index=es_index, doc_type='meme', body=meme, id=mid)
+
+        if mid is None:
+            memes_new += 1
+        memes_indexed += 1
+
+        if debug:
+            print("Indexed {0} meme (id: {2}) with title: {1}".format(site, meme['title'], mid))
     print("Indexed {0} ({1} new) memes for site {2}".format(memes_indexed, memes_new, site))
 
 
